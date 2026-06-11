@@ -1,47 +1,68 @@
-'use client';
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { ReactNode } from "react";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Upload } from 'lucide-react';
+interface HeaderProps {
+  title:       string;
+  description: string;
+  action?:     ReactNode;   // custom button/element — defaults to Upload Video
+  showUpload?: boolean;     // set false to hide the default Upload Video button
+}
 
-const PAGES: Record<string, { title: string; subtitle: string }> = {
-  '/dashboard':    { title: 'Dashboard',    subtitle: 'Your team performance overview' },
-  '/team-profile': { title: 'Team Profile', subtitle: 'Manage your team details and squad' },
-  '/upload-video': { title: 'Upload Video', subtitle: 'Upload a football match video for AI-powered analysis' },
-  '/analysis':     { title: 'Analysis',     subtitle: 'All your match video analyses' },
-};
-
-export default function Header() {
-  const pathname = usePathname();
-  const page = Object.entries(PAGES).find(([key]) => pathname.startsWith(key))?.[1]
-    ?? { title: 'EzStats', subtitle: '' };
-
+export default function Header({
+  title,
+  description,
+  action,
+  showUpload = true,
+}: HeaderProps) {
   return (
-    <header style={{
-      height: 72,
-      borderBottom: '1px solid #e5e7eb',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 32px',
-      top: 0,
-      zIndex: 50,
-    }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        marginBottom: 24,
+      }}
+    >
       <div>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>
-          {page.title}
+        <h1
+          style={{
+            fontSize: 26,
+            fontWeight: 700,
+            color: "#111827",
+            margin: 0,
+            lineHeight: 1.2,
+          }}
+        >
+          {title}
         </h1>
-        <p style={{ fontSize: 14, color: '#8E8E8E', margin: 0 }}>
-          {page.subtitle}
+        <p style={{ fontSize: 14, color: "#6b7280", marginTop: 6 }}>
+          {description}
         </p>
       </div>
 
-      <Link href="/upload-video" style={{ textDecoration: 'none' }}>
-        <button className="btn-primary">
-          <Upload size={16} />
-            Upload Video
-        </button>
-      </Link>
-    </header>
+      {/* Custom action takes priority; falls back to Upload Video */}
+      {action ?? (showUpload && (
+        <Link
+          href="/upload"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            backgroundColor: "#1a7a4a",
+            color: "#fff",
+            fontSize: 14,
+            fontWeight: 500,
+            padding: "10px 18px",
+            borderRadius: 10,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <Plus size={16} />
+          New Analysis
+        </Link>
+      ))}
+    </div>
   );
 }

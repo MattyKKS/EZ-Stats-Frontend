@@ -1,3 +1,3 @@
 export default function TeamProfilePage() {
-  return <h1 style={{ fontSize: 48, fontWeight: 700 }}>Team Profile</h1>;
+  return <div style={{ padding: 28 }}><h1>Team Profile</h1></div>;
 }

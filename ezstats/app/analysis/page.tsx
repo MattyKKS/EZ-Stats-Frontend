@@ -1,3 +1,3 @@
 export default function AnalysisPage() {
-  return <h1 style={{ fontSize: 48, fontWeight: 700 }}>Analysis</h1>;
+  return <div style={{ padding: 28 }}><h1>Analysis</h1></div>;
 }
