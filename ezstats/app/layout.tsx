@@ -9,12 +9,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="flex h-screen overflow-hidden bg-gray-100">
+      <body className="flex h-screen overflow-hidden bg-bg-secondary font-sans">
         <Sidebar />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0">{children}</main>
       </body>
