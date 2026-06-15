@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"C:\\\\Users\\\\kaung\\\\Desktop\")",
+      "Read(//c/Users/kaung/Desktop/**)"
+    ]
+  }
+}

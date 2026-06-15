@@ -12,7 +12,7 @@ interface Props {
   newTeamName: string;
   newTeamColor: string;
   onToggleDropdown: () => void;
-  onSelectTeam: (id: number) => void;
+  onSelectTeam: (id: string) => void;
   onToggleAddTeam: () => void;
   onNewTeamNameChange: (val: string) => void;
   onNewTeamColorChange: (val: string) => void;

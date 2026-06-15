@@ -17,13 +17,13 @@ function PositionBadge({ position }: { position: string }) {
 
 interface Props {
   players: Player[];
-  editingId: number | null;
+  editingId: string | null;
   editData: Partial<Player>;
   onStartEdit: (p: Player) => void;
   onEditChange: (patch: Partial<Player>) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
   onAddPlayer: () => void;
 }
 
@@ -31,7 +31,7 @@ export default function TeamRoster({
   players, editingId, editData,
   onStartEdit, onEditChange, onSaveEdit, onCancelEdit, onDelete, onAddPlayer,
 }: Props) {
-  const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const confirmPlayer = players.find(p => p.id === confirmId);
 
   return (

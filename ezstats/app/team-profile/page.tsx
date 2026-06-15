@@ -6,30 +6,41 @@ import TeamSelector from "./TeamSelection";
 import TeamInfo from "./TeamInfo";
 import TeamRoster from "./TeamRoster";
 import AddPlayerModal from "./AddPlayerModal";
-import { Team, Player, TEAM_COLORS, DEFAULT_PLAYERS, EMPTY_PLAYER, updateTeam } from "./types";
+import { Team, Player, TEAM_COLORS, EMPTY_PLAYER, updateTeam as localUpdateTeam } from "./types";
+import {
+  getTeams,
+  getTeam,
+  createTeam as apiCreateTeam,
+  updateTeam as apiUpdateTeam,
+  createPlayer as apiCreatePlayer,
+  updatePlayer as apiUpdatePlayer,
+  deletePlayer as apiDeletePlayer,
+} from "@/lib/api";
 
+function toUiPlayer(p: { id: string; name: string; jerseyNumber: number | null; position: string | null }): Player {
+  return { id: p.id, name: p.name, number: p.jerseyNumber ?? "", position: p.position ?? "", nationality: "" };
+}
 
 export default function TeamProfilePage() {
-  const [teams, setTeams] = useState<Team[]>([
-    { id: 1, name: "SE United", color: "#EF4444", players: DEFAULT_PLAYERS },
-  ]);
-  const [selectedTeamId, setSelectedTeamId] = useState(1);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
-  // Team selection 
+  // Team selection
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showAddTeam, setShowAddTeam]           = useState(false);
   const [newTeamName, setNewTeamName]           = useState("");
   const [newTeamColor, setNewTeamColor]         = useState(TEAM_COLORS[4]);
 
-  // Team info edit 
+  // Team info edit
   const [editingTeam, setEditingTeam]     = useState(false);
   const [teamNameDraft, setTeamNameDraft] = useState("");
 
-  // Player edit 
-  const [editingId, setEditingId] = useState<number | null>(null);
+  // Player edit
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData]   = useState<Partial<Player>>({});
 
-  // Add player modal 
+  // Add player modal
   const [showModal, setShowModal]       = useState(false);
   const [newPlayer, setNewPlayer]       = useState({ ...EMPTY_PLAYER });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -42,43 +53,90 @@ export default function TeamProfilePage() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  // Load teams on mount
+  useEffect(() => {
+    getTeams()
+      .then(apiTeams => {
+        const uiTeams: Team[] = apiTeams.map(t => ({
+          id: t.id,
+          name: t.name,
+          color: t.primaryColor ?? TEAM_COLORS[0],
+          players: [],
+        }));
+        setTeams(uiTeams);
+        if (uiTeams.length > 0) setSelectedTeamId(uiTeams[0].id);
+      })
+      .catch(() => setToast("Could not connect to backend"))
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load players whenever selected team changes
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    getTeam(selectedTeamId)
+      .then(apiTeam => {
+        const players = apiTeam.players.map(toUiPlayer);
+        setTeams(ts => localUpdateTeam(ts, selectedTeamId, { players }));
+      })
+      .catch(() => {});
+  }, [selectedTeamId]);
+
   const selectedTeam = teams.find(t => t.id === selectedTeamId) ?? teams[0];
 
-  //  Team handlers 
-  const addTeam = () => {
+  // Team handlers
+  const addTeam = async () => {
     if (!newTeamName.trim()) return;
-    const team: Team = { id: Date.now(), name: newTeamName.trim(), color: newTeamColor, players: [] };
-    setTeams(ts => [...ts, team]);
-    setSelectedTeamId(team.id);
-    setToast(`"${team.name}" has been created`);
-    setNewTeamName(""); setNewTeamColor(TEAM_COLORS[4]);
-    setShowAddTeam(false); setShowTeamDropdown(false);
-    setEditingId(null);
+    try {
+      const apiTeam = await apiCreateTeam({ name: newTeamName.trim(), primaryColor: newTeamColor });
+      const team: Team = { id: apiTeam.id, name: apiTeam.name, color: apiTeam.primaryColor ?? newTeamColor, players: [] };
+      setTeams(ts => [...ts, team]);
+      setSelectedTeamId(team.id);
+      setToast(`"${team.name}" has been created`);
+      setNewTeamName(""); setNewTeamColor(TEAM_COLORS[4]);
+      setShowAddTeam(false); setShowTeamDropdown(false);
+      setEditingId(null);
+    } catch {
+      setToast("Failed to create team");
+    }
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => setTeams(ts => updateTeam(ts, selectedTeamId, { logo: ev.target?.result as string }));
+    reader.onload = ev => setTeams(ts => localUpdateTeam(ts, selectedTeamId, { logo: ev.target?.result as string }));
     reader.readAsDataURL(file);
   };
 
-  //  Player handlers 
+  // Player handlers
   const mutatePlayers = (fn: (ps: Player[]) => Player[]) =>
-    setTeams(ts => updateTeam(ts, selectedTeamId, { players: fn(selectedTeam.players) }));
+    setTeams(ts => localUpdateTeam(ts, selectedTeamId, { players: fn(selectedTeam?.players ?? []) }));
 
   const startEdit = (p: Player) => {
     setEditingId(p.id);
     setEditData({ name: p.name, number: p.number, position: p.position, nationality: p.nationality });
   };
-  const saveEdit = () => {
-    mutatePlayers(ps => ps.map(p => p.id === editingId ? { ...p, ...editData } : p));
-    setToast(`"${editData.name}" has been updated`);
-    setEditingId(null);
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    try {
+      const jerseyNumber = editData.number === "" ? undefined : Number(editData.number);
+      await apiUpdatePlayer(editingId, { name: editData.name, jerseyNumber, position: editData.position || undefined });
+      mutatePlayers(ps => ps.map(p => p.id === editingId ? { ...p, ...editData } : p));
+      setToast(`"${editData.name}" has been updated`);
+      setEditingId(null);
+    } catch {
+      setToast("Failed to update player");
+    }
   };
-  const deletePlayer = (id: number) => {
-    mutatePlayers(ps => ps.filter(p => p.id !== id));
-    if (editingId === id) setEditingId(null);
+
+  const deletePlayer = async (id: string) => {
+    try {
+      await apiDeletePlayer(id);
+      mutatePlayers(ps => ps.filter(p => p.id !== id));
+      if (editingId === id) setEditingId(null);
+    } catch {
+      setToast("Failed to delete player");
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,12 +146,69 @@ export default function TeamProfilePage() {
     reader.readAsDataURL(file);
   };
 
-  const addPlayer = () => {
+  const addPlayer = async () => {
     if (!newPlayer.name.trim()) return;
-    mutatePlayers(ps => [...ps, { id: Date.now(), ...newPlayer, photo: photoPreview ?? undefined }]);
-    setToast(`"${newPlayer.name}" has been added`);
-    setNewPlayer({ ...EMPTY_PLAYER }); setPhotoPreview(null); setShowModal(false);
+    try {
+      const jerseyNumber = newPlayer.number === "" ? undefined : Number(newPlayer.number);
+      const apiPlayer = await apiCreatePlayer(selectedTeamId, {
+        name: newPlayer.name,
+        jerseyNumber,
+        position: newPlayer.position || undefined,
+      });
+      const uiPlayer: Player = { ...toUiPlayer(apiPlayer), nationality: newPlayer.nationality, photo: photoPreview ?? undefined };
+      mutatePlayers(ps => [...ps, uiPlayer]);
+      setToast(`"${newPlayer.name}" has been added`);
+      setNewPlayer({ ...EMPTY_PLAYER }); setPhotoPreview(null); setShowModal(false);
+    } catch {
+      setToast("Failed to add player");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg-secondary p-7">
+        <Header title="Team Profile" description="Manage your team roster" />
+        <div className="flex items-center justify-center mt-20">
+          <p className="text-sm text-text-muted">Loading teams…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedTeam) {
+    return (
+      <div className="min-h-screen bg-bg-secondary p-7">
+        <Header title="Team Profile" description="Manage your team roster" />
+        <div className="mt-4 bg-white rounded-xl border border-border flex flex-col items-center justify-center py-16">
+          <p className="text-sm font-medium text-text-secondary">No teams yet</p>
+          <p className="text-xs text-text-muted mt-1">Add your first team using the button below</p>
+          <div className="mt-4">
+            <TeamSelector
+              teams={[]}
+              selectedTeam={{ id: "", name: "", color: TEAM_COLORS[0], players: [] }}
+              showDropdown={false}
+              showAddTeam={showAddTeam}
+              newTeamName={newTeamName}
+              newTeamColor={newTeamColor}
+              onToggleDropdown={() => {}}
+              onSelectTeam={() => {}}
+              onToggleAddTeam={() => setShowAddTeam(true)}
+              onNewTeamNameChange={setNewTeamName}
+              onNewTeamColorChange={setNewTeamColor}
+              onAddTeam={addTeam}
+              onCancelAdd={() => setShowAddTeam(false)}
+            />
+          </div>
+        </div>
+
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg">
+            {toast}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg-secondary p-7">
@@ -122,10 +237,15 @@ export default function TeamProfilePage() {
           nameDraft={teamNameDraft}
           onStartEdit={() => { setTeamNameDraft(selectedTeam.name); setEditingTeam(true); }}
           onNameDraftChange={setTeamNameDraft}
-          onSave={() => {
-            setTeams(ts => updateTeam(ts, selectedTeamId, { name: teamNameDraft }));
-            setToast(`Team name updated to "${teamNameDraft}"`);
-            setEditingTeam(false);
+          onSave={async () => {
+            try {
+              await apiUpdateTeam(selectedTeamId, { name: teamNameDraft });
+              setTeams(ts => localUpdateTeam(ts, selectedTeamId, { name: teamNameDraft }));
+              setToast(`Team name updated to "${teamNameDraft}"`);
+              setEditingTeam(false);
+            } catch {
+              setToast("Failed to update team");
+            }
           }}
           onCancel={() => setEditingTeam(false)}
           onLogoChange={handleLogoChange}
@@ -156,7 +276,6 @@ export default function TeamProfilePage() {
         />
       )}
 
-      {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg animate-fade-in">
           {toast}
@@ -165,4 +284,3 @@ export default function TeamProfilePage() {
     </div>
   );
 }
-
