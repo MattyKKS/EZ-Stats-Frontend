@@ -8,10 +8,12 @@ import TeamRoster from "./TeamRoster";
 import AddPlayerModal from "./AddPlayerModal";
 import { Team, Player, TEAM_COLORS, EMPTY_PLAYER, updateTeam as localUpdateTeam } from "./types";
 import {
+  BASE_URL,
   getTeams,
   getTeam,
   createTeam as apiCreateTeam,
   updateTeam as apiUpdateTeam,
+  uploadTeamLogo,
   createPlayer as apiCreatePlayer,
   updatePlayer as apiUpdatePlayer,
   deletePlayer as apiDeletePlayer,
@@ -61,6 +63,7 @@ export default function TeamProfilePage() {
           id: t.id,
           name: t.name,
           color: t.primaryColor ?? TEAM_COLORS[0],
+          logo: t.logoUrl ? `${BASE_URL}${t.logoUrl}` : undefined,
           players: [],
         }));
         setTeams(uiTeams);
@@ -76,7 +79,8 @@ export default function TeamProfilePage() {
     getTeam(selectedTeamId)
       .then(apiTeam => {
         const players = apiTeam.players.map(toUiPlayer);
-        setTeams(ts => localUpdateTeam(ts, selectedTeamId, { players }));
+        const logo = apiTeam.logoUrl ? `${BASE_URL}${apiTeam.logoUrl}` : undefined;
+        setTeams(ts => localUpdateTeam(ts, selectedTeamId, { players, logo }));
       })
       .catch(() => {});
   }, [selectedTeamId]);
@@ -100,11 +104,15 @@ export default function TeamProfilePage() {
     }
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => setTeams(ts => localUpdateTeam(ts, selectedTeamId, { logo: ev.target?.result as string }));
-    reader.readAsDataURL(file);
+    try {
+      const updatedTeam = await uploadTeamLogo(selectedTeamId, file);
+      const logo = updatedTeam.logoUrl ? `${BASE_URL}${updatedTeam.logoUrl}` : undefined;
+      setTeams(ts => localUpdateTeam(ts, selectedTeamId, { logo }));
+    } catch {
+      setToast("Logo upload failed — use PNG/JPG/WEBP/SVG under 2 MB");
+    }
   };
 
   // Player handlers
