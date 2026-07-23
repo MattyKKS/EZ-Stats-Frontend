@@ -4,7 +4,7 @@ import type {
   MatchReport,
 } from "./types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
+export const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api";
 
 async function request<T>(
   method: "GET" | "POST" | "PATCH" | "DELETE",
@@ -67,6 +67,20 @@ export const updateMatch = (id: string, body: Partial<CreateMatch> & UpdateMatch
 
 export const deleteMatch = (id: string) =>
   request<Match>("DELETE", `/matches/${id}`);
+
+// ── Team logo ─────────────────────────────────────────────────────────────────
+
+export async function uploadTeamLogo(teamId: string, file: File): Promise<Team> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE_URL}/teams/${teamId}/logo`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(`logo upload → ${res.status}`);
+  return res.json();
+}
+
+export async function deleteTeamLogo(teamId: string): Promise<void> {
+  await fetch(`${BASE_URL}/teams/${teamId}/logo`, { method: "DELETE" });
+}
 
 // ── Health ────────────────────────────────────────────────────────────────────
 

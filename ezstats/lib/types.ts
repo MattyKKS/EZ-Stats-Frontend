@@ -8,6 +8,7 @@ export type Team = {
   description: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
+  logoUrl: string | null;
   ownerId: string | null;
   createdAt: string;
   updatedAt: string;
