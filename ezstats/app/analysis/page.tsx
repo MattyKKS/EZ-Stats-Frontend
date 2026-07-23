@@ -82,9 +82,10 @@ export default function AnalysisPage() {
           {matches.map(m => {
             const s = STATUS_STYLE[m.status] ?? STATUS_STYLE.CREATED;
             return (
-              <div
+              <Link
                 key={m.id}
-                className="bg-white rounded-xl border border-border px-6 py-4 flex items-center justify-between gap-4"
+                href={`/analysis/${m.id}`}
+                className="bg-white rounded-xl border border-border px-6 py-4 flex items-center justify-between gap-4 no-underline hover:border-primary transition-colors"
               >
                 <div className="flex items-center gap-4">
                   <div
@@ -104,7 +105,7 @@ export default function AnalysisPage() {
                 <span className={`text-xs font-semibold px-3 py-1 rounded-full ${s.bg} ${s.text}`}>
                   {s.label}
                 </span>
-              </div>
+              </Link>
             );
           })}
         </div>
