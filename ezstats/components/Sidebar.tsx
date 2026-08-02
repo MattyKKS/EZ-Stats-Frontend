@@ -100,7 +100,7 @@ export default function Sidebar() {
           alt="EzStats"
           width={90}
           height={28}
-          className="ml-3 object-contain"
+          className="ml-3 object-contain h-7 w-[90px]"
         />
       </div>
 
@@ -117,7 +117,7 @@ export default function Sidebar() {
                 alt="EzStats"
                 width={100}
                 height={32}
-                className="object-contain"
+                className="object-contain h-8 w-[100px]"
               />
               <button
                 onClick={() => setMobileOpen(false)}

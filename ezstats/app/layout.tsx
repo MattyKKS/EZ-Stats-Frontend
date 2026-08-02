@@ -12,7 +12,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="flex h-screen overflow-hidden bg-bg-secondary font-sans">
+      <body
+        className="flex h-screen overflow-hidden bg-bg-secondary font-sans"
+        suppressHydrationWarning
+      >
         <Sidebar />
         <main className="flex-1 overflow-y-auto pt-14 md:pt-0">{children}</main>
       </body>
