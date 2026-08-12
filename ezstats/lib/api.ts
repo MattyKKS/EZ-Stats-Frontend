@@ -68,6 +68,16 @@ export const updateMatch = (id: string, body: Partial<CreateMatch> & UpdateMatch
 export const deleteMatch = (id: string) =>
   request<Match>("DELETE", `/matches/${id}`);
 
+// ── Match video ───────────────────────────────────────────────────────────────
+
+export async function uploadMatchVideo(matchId: string, file: File): Promise<Match> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${BASE_URL}/matches/${matchId}/video`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(`video upload → ${res.status}`);
+  return res.json();
+}
+
 // ── Team logo ─────────────────────────────────────────────────────────────────
 
 export async function uploadTeamLogo(teamId: string, file: File): Promise<Team> {
