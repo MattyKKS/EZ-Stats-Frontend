@@ -188,9 +188,9 @@ export default function TeamProfilePage() {
       <div className="min-h-screen bg-bg-secondary p-7">
         <Header title="Team Profile" description="Manage your team roster" />
         <div className="mt-4 bg-white rounded-xl border border-border flex flex-col items-center justify-center py-16">
-          <p className="text-sm font-medium text-text-secondary">No teams yet</p>
+          <p className="text-lg font-bold text-text-primary">No teams yet</p>
           <p className="text-xs text-text-muted mt-1">Add your first team using the button below</p>
-          <div className="mt-4">
+          <div className="mt-4 w-80">
             <TeamSelector
               teams={[]}
               selectedTeam={{ id: "", name: "", color: TEAM_COLORS[0], players: [] }}

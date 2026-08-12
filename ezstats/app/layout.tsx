@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: "EzStats",
@@ -13,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className="flex h-screen overflow-hidden bg-bg-secondary font-sans"
+        className={`${inter.className} flex h-screen overflow-hidden bg-bg-secondary font-sans`}
         suppressHydrationWarning
       >
         <Sidebar />
