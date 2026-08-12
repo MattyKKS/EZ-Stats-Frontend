@@ -16,7 +16,7 @@ export default function MatchDetailsForm({ form, teams, onChange }: Props) {
       <div>
         <label className="block text-sm font-semibold text-text-primary mb-1.5">Match Title</label>
         <input
-          className={inputCls}
+          className={inputCls(form.matchTitle.trim() !== "")}
           placeholder="Example League Match Round 1"
           value={form.matchTitle}
           onChange={e => onChange({ matchTitle: e.target.value })}
@@ -31,31 +31,30 @@ export default function MatchDetailsForm({ form, teams, onChange }: Props) {
         onToggleHome={() => onChange({ isHome: !form.isHome })}
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold text-text-primary mb-1.5">Match Date</label>
-          <input
-            type="date"
-            className={inputCls}
-            value={form.matchDate}
-            onChange={e => onChange({ matchDate: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-text-primary mb-1.5">Match Time</label>
-          <input
-            type="time"
-            className={inputCls}
-            value={form.matchTime}
-            onChange={e => onChange({ matchTime: e.target.value })}
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-semibold text-text-primary mb-1.5">Match Time</label>
+        <input
+          type="time"
+          className={inputCls(form.matchTime !== "")}
+          value={form.matchTime}
+          onChange={e => onChange({ matchTime: e.target.value })}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-text-primary mb-1.5">Match Date</label>
+        <input
+          type="date"
+          className={inputCls(form.matchDate !== "")}
+          value={form.matchDate}
+          onChange={e => onChange({ matchDate: e.target.value })}
+        />
       </div>
 
       <div>
         <label className="block text-sm font-semibold text-text-primary mb-1.5">Opponent Team</label>
         <input
-          className={inputCls}
+          className={inputCls(form.opponent.trim() !== "")}
           placeholder="Example Fc"
           value={form.opponent}
           onChange={e => onChange({ opponent: e.target.value })}

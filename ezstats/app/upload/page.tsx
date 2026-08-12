@@ -74,15 +74,19 @@ export default function UploadPage() {
     <div className="min-h-screen bg-bg-secondary p-7">
       <Header title="Upload Video" description="Upload a football match video for analysis" showUpload={false} />
 
-      <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-border p-8 flex flex-col gap-6">
-        <VideoDropzone
-          file={file}
-          onFileSelect={f => { setFile(f); setFileError(null); }}
-          onFileClear={() => setFile(null)}
-          error={fileError}
-        />
+      <div className="w-full bg-white rounded-2xl border border-border p-8 flex flex-col gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <VideoDropzone
+              file={file}
+              onFileSelect={f => { setFile(f); setFileError(null); }}
+              onFileClear={() => setFile(null)}
+              error={fileError}
+            />
+          </div>
 
-        <MatchDetailsForm form={form} teams={teams} onChange={updateForm} />
+          <MatchDetailsForm form={form} teams={teams} onChange={updateForm} />
+        </div>
 
         <button
           onClick={handleAnalyze}

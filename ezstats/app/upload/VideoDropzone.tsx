@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UploadCloud, FileVideo, X } from "lucide-react";
 import { formatFileSize, isVideoFile } from "./types";
 
@@ -14,6 +14,19 @@ interface Props {
 export default function VideoDropzone({ file, onFileSelect, onFileClear, error }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
+
+  useEffect(() => {
+    setPreviewError(false);
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   const handleFiles = (files: FileList | null) => {
     const f = files?.[0];
@@ -27,27 +40,45 @@ export default function VideoDropzone({ file, onFileSelect, onFileClear, error }
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
-        className={`border-2 border-dashed rounded-xl px-6 py-16 flex flex-col items-center justify-center text-center transition-colors ${
-          dragging ? "border-primary bg-primary-bg" : "border-primary/50 bg-primary-bg/60"
+        className={`relative w-full aspect-video border-2 border-dashed rounded-xl overflow-hidden flex flex-col items-center justify-center text-center transition-colors ${
+          file ? "border-primary bg-black" : dragging ? "border-primary bg-primary-bg" : "border-primary/50 bg-primary-bg/60"
         }`}
       >
-        {file ? (
-          <div className="flex flex-col items-center gap-3">
-            <FileVideo size={40} className="text-primary" />
-            <div>
-              <p className="text-sm font-medium text-text-primary">{file.name}</p>
-              <p className="text-xs text-text-muted mt-0.5">{formatFileSize(file.size)}</p>
-            </div>
+        {file && previewUrl ? (
+          <>
+            {previewError ? (
+              <div className="flex flex-col items-center gap-2 px-6">
+                <FileVideo size={40} className="text-white/70" />
+                <p className="text-sm text-white/90">Preview unavailable — your browser can&apos;t play this format</p>
+                <p className="text-xs text-white/50">It will still upload and analyze normally</p>
+              </div>
+            ) : (
+              <video
+                key={previewUrl}
+                src={previewUrl}
+                controls
+                preload="metadata"
+                playsInline
+                onError={() => setPreviewError(true)}
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            )}
+
             <button
               onClick={onFileClear}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+              className="absolute top-3 right-3 inline-flex items-center gap-1.5 text-xs font-medium text-white bg-black/60 hover:bg-black/80 px-2.5 py-1.5 rounded-lg transition-colors"
             >
-              <X size={13} /> Remove file
+              <X size={13} /> Remove
             </button>
-          </div>
+
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent px-4 py-3 text-left pointer-events-none">
+              <p className="text-sm font-medium text-white truncate">{file.name}</p>
+              <p className="text-xs text-white/70">{formatFileSize(file.size)}</p>
+            </div>
+          </>
         ) : (
-          <>
-            <UploadCloud size={40} className="text-text-primary" />
+          <div className="px-6">
+            <UploadCloud size={40} className="text-text-primary mx-auto" />
             <p className="text-sm text-text-primary mt-4">Upload or Drag your match video file here</p>
             <button
               onClick={() => inputRef.current?.click()}
@@ -55,8 +86,9 @@ export default function VideoDropzone({ file, onFileSelect, onFileClear, error }
             >
               Browse File
             </button>
-          </>
+          </div>
         )}
+
         <input
           ref={inputRef}
           type="file"

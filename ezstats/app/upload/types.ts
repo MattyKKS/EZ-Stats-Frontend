@@ -16,8 +16,12 @@ export const EMPTY_FORM: UploadFormState = {
   opponent: "",
 };
 
-export const inputCls =
-  "w-full border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary bg-white";
+const inputBaseCls =
+  "w-full border rounded-lg px-3 py-2.5 text-sm placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary bg-white transition-colors";
+
+export function inputCls(filled: boolean) {
+  return `${inputBaseCls} ${filled ? "border-border text-text-primary" : "border-border/40 text-text-muted"}`;
+}
 
 export function isVideoFile(file: File) {
   return file.type.startsWith("video/");
