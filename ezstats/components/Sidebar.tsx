@@ -115,9 +115,9 @@ export default function Sidebar() {
               <Image
                 src="/logo.png"
                 alt="EzStats"
-                width={100}
-                height={32}
-                className="object-contain h-8 w-[100px]"
+                width={128}
+                height={40}
+                className="object-contain h-10 w-[128px]"
               />
               <button
                 onClick={() => setMobileOpen(false)}
@@ -153,8 +153,8 @@ export default function Sidebar() {
             <Image
               src="/logo.png"
               alt="EzStats"
-              width={100}
-              height={32}
+              width={128}
+              height={40}
               className="object-contain"
             />
           )}

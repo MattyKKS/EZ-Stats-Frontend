@@ -6,10 +6,10 @@ import TeamSelector from "./TeamSelection";
 import TeamInfo from "./TeamInfo";
 import TeamRoster from "./TeamRoster";
 import AddPlayerModal from "./AddPlayerModal";
-import { Team, Player, TEAM_COLORS, EMPTY_PLAYER, updateTeam as localUpdateTeam } from "./types";
+import { Team, Player, TEAM_COLORS, EMPTY_PLAYER } from "./types";
+import { useTeamContext } from "@/lib/TeamContext";
 import {
   BASE_URL,
-  getTeams,
   getTeam,
   createTeam as apiCreateTeam,
   updateTeam as apiUpdateTeam,
@@ -23,12 +23,21 @@ function toUiPlayer(p: { id: string; name: string; jerseyNumber: number | null; 
   return { id: p.id, name: p.name, number: p.jerseyNumber ?? "", position: p.position ?? "", nationality: "" };
 }
 
-export default function TeamProfilePage() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+interface TeamOverride {
+  name?: string;
+  color?: string;
+  logo?: string;
+}
 
-  // Team selection
+export default function TeamProfilePage() {
+  const { teams: ctxTeams, selectedTeamId, setSelectedTeamId, loading, refresh } = useTeamContext();
+
+  // Local overrides/roster layered on top of the globally shared team list —
+  // keeps this page's richer per-team data without duplicating the fetch.
+  const [overrides, setOverrides] = useState<Record<string, TeamOverride>>({});
+  const [playersByTeam, setPlayersByTeam] = useState<Record<string, Player[]>>({});
+
+  // Team selection card
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showAddTeam, setShowAddTeam]           = useState(false);
   const [newTeamName, setNewTeamName]           = useState("");
@@ -55,47 +64,37 @@ export default function TeamProfilePage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Load teams on mount
-  useEffect(() => {
-    getTeams()
-      .then(apiTeams => {
-        const uiTeams: Team[] = apiTeams.map(t => ({
-          id: t.id,
-          name: t.name,
-          color: t.primaryColor ?? TEAM_COLORS[0],
-          logo: t.logoUrl ? `${BASE_URL}${t.logoUrl}` : undefined,
-          players: [],
-        }));
-        setTeams(uiTeams);
-        if (uiTeams.length > 0) setSelectedTeamId(uiTeams[0].id);
-      })
-      .catch(() => setToast("Could not connect to backend"))
-      .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const teams: Team[] = ctxTeams.map(t => ({
+    id: t.id,
+    name: overrides[t.id]?.name ?? t.name,
+    color: overrides[t.id]?.color ?? t.primaryColor ?? TEAM_COLORS[0],
+    logo: overrides[t.id]?.logo ?? (t.logoUrl ? `${BASE_URL}${t.logoUrl}` : undefined),
+    players: playersByTeam[t.id] ?? [],
+  }));
 
-  // Load players whenever selected team changes
+  const selectedTeam = teams.find(t => t.id === selectedTeamId) ?? teams[0];
+
+  // Load the roster for whichever team is globally selected
   useEffect(() => {
     if (!selectedTeamId) return;
     getTeam(selectedTeamId)
       .then(apiTeam => {
-        const players = apiTeam.players.map(toUiPlayer);
-        const logo = apiTeam.logoUrl ? `${BASE_URL}${apiTeam.logoUrl}` : undefined;
-        setTeams(ts => localUpdateTeam(ts, selectedTeamId, { players, logo }));
+        setPlayersByTeam(m => ({ ...m, [selectedTeamId]: apiTeam.players.map(toUiPlayer) }));
+        if (apiTeam.logoUrl) {
+          setOverrides(o => ({ ...o, [selectedTeamId]: { ...o[selectedTeamId], logo: `${BASE_URL}${apiTeam.logoUrl}` } }));
+        }
       })
       .catch(() => {});
   }, [selectedTeamId]);
-
-  const selectedTeam = teams.find(t => t.id === selectedTeamId) ?? teams[0];
 
   // Team handlers
   const addTeam = async () => {
     if (!newTeamName.trim()) return;
     try {
       const apiTeam = await apiCreateTeam({ name: newTeamName.trim(), primaryColor: newTeamColor });
-      const team: Team = { id: apiTeam.id, name: apiTeam.name, color: apiTeam.primaryColor ?? newTeamColor, players: [] };
-      setTeams(ts => [...ts, team]);
-      setSelectedTeamId(team.id);
-      setToast(`"${team.name}" has been created`);
+      await refresh();
+      setSelectedTeamId(apiTeam.id);
+      setToast(`"${apiTeam.name}" has been created`);
       setNewTeamName(""); setNewTeamColor(TEAM_COLORS[4]);
       setShowAddTeam(false); setShowTeamDropdown(false);
       setEditingId(null);
@@ -109,7 +108,7 @@ export default function TeamProfilePage() {
     try {
       const updatedTeam = await uploadTeamLogo(selectedTeamId, file);
       const logo = updatedTeam.logoUrl ? `${BASE_URL}${updatedTeam.logoUrl}` : undefined;
-      setTeams(ts => localUpdateTeam(ts, selectedTeamId, { logo }));
+      setOverrides(o => ({ ...o, [selectedTeamId]: { ...o[selectedTeamId], logo } }));
     } catch {
       setToast("Logo upload failed — use PNG/JPG/WEBP/SVG under 2 MB");
     }
@@ -117,7 +116,7 @@ export default function TeamProfilePage() {
 
   // Player handlers
   const mutatePlayers = (fn: (ps: Player[]) => Player[]) =>
-    setTeams(ts => localUpdateTeam(ts, selectedTeamId, { players: fn(selectedTeam?.players ?? []) }));
+    setPlayersByTeam(m => ({ ...m, [selectedTeamId]: fn(m[selectedTeamId] ?? []) }));
 
   const startEdit = (p: Player) => {
     setEditingId(p.id);
@@ -174,7 +173,7 @@ export default function TeamProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-secondary p-7">
+      <div className="min-h-screen bg-bg-secondary p-5">
         <Header title="Team Profile" description="Manage your team roster" />
         <div className="flex items-center justify-center mt-20">
           <p className="text-sm text-text-muted">Loading teams…</p>
@@ -185,7 +184,7 @@ export default function TeamProfilePage() {
 
   if (!selectedTeam) {
     return (
-      <div className="min-h-screen bg-bg-secondary p-7">
+      <div className="min-h-screen bg-bg-secondary p-5">
         <Header title="Team Profile" description="Manage your team roster" />
         <div className="mt-4 bg-white rounded-xl border border-border flex flex-col items-center justify-center py-16">
           <p className="text-lg font-bold text-text-primary">No teams yet</p>
@@ -219,7 +218,7 @@ export default function TeamProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-secondary p-7">
+    <div className="min-h-screen bg-bg-secondary p-5">
       <Header title="Team Profile" description="Manage your team roster" />
 
       <div className="grid grid-cols-6 gap-4 mb-6">
@@ -248,9 +247,10 @@ export default function TeamProfilePage() {
           onSave={async () => {
             try {
               await apiUpdateTeam(selectedTeamId, { name: teamNameDraft });
-              setTeams(ts => localUpdateTeam(ts, selectedTeamId, { name: teamNameDraft }));
+              setOverrides(o => ({ ...o, [selectedTeamId]: { ...o[selectedTeamId], name: teamNameDraft } }));
               setToast(`Team name updated to "${teamNameDraft}"`);
               setEditingTeam(false);
+              refresh();
             } catch {
               setToast("Failed to update team");
             }

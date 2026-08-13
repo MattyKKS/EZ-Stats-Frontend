@@ -1,38 +1,44 @@
 import Link from "next/link";
-import { Upload } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ReactNode } from "react";
+import TeamSwitcher from "./TeamSwitcher";
 
 interface HeaderProps {
-  title:       string;
-  description: string;
-  action?:     ReactNode;
-  showUpload?: boolean;
+  title:              string;
+  description:        string;
+  action?:            ReactNode;
+  showNewAnalysis?:   boolean;
+  showTeamSwitcher?:  boolean;
 }
 
 export default function Header({
   title,
   description,
   action,
-  showUpload = true,
+  showNewAnalysis = true,
+  showTeamSwitcher = true,
 }: HeaderProps) {
   return (
-    <div className="flex items-start justify-between mb-6">
+    <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
       <div>
-        <h1 className="text-[26px] font-bold text-text-primary leading-tight m-0">
+        <h1 className="text-xl font-bold text-text-primary leading-tight m-0">
           {title}
         </h1>
-        <p className="text-sm text-text-secondary mt-1.5">{description}</p>
+        <p className="text-sm text-text-secondary mt-1">{description}</p>
       </div>
 
-      {action ?? (showUpload && (
-        <Link
-          href="/upload"
-          className="inline-flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-medium px-[18px] py-[10px] rounded-[10px] no-underline whitespace-nowrap transition-colors"
-        >
-          <Upload size={16} />
-          Upload Video
-        </Link>
-      ))}
+      <div className="flex items-center gap-2">
+        {showTeamSwitcher && <TeamSwitcher />}
+        {action ?? (showNewAnalysis && (
+          <Link
+            href="/upload"
+            className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium px-3 py-2 rounded-lg no-underline whitespace-nowrap transition-colors"
+          >
+            <Plus size={13} />
+            New Analysis
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

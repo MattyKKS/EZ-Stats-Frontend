@@ -44,7 +44,7 @@ export default function MatchAnalysisPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-secondary p-7">
+      <div className="min-h-screen bg-bg-secondary p-5">
         <div className="flex items-center justify-center mt-20">
           <p className="text-sm text-text-muted">Loading match…</p>
         </div>
@@ -54,7 +54,7 @@ export default function MatchAnalysisPage() {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-bg-secondary p-7">
+      <div className="min-h-screen bg-bg-secondary p-5">
         <div className="bg-white rounded-xl border border-border flex flex-col items-center justify-center py-16">
           <p className="text-sm font-medium text-text-secondary">Match not found</p>
         </div>
@@ -65,7 +65,7 @@ export default function MatchAnalysisPage() {
   const hasVideo = matchIsMock || (match.status === "COMPLETED" && !!match.videoPath);
 
   return (
-    <div className="min-h-screen bg-bg-secondary p-7 flex flex-col gap-4">
+    <div className="min-h-screen bg-bg-secondary p-5 flex flex-col gap-4">
       <ScoreBoard
         match={match}
         summary={report?.summary}
