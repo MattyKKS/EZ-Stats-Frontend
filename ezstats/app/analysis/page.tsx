@@ -51,25 +51,24 @@ export default function AnalysisPage() {
   const { selectedTeamId, selectedTeam, loading: teamsLoading } = useTeamContext();
 
   const [matches, setMatches] = useState<Match[]>([]);
-  const [loadingMatches, setLoadingMatches] = useState(true);
+  const [matchesTeamId, setMatchesTeamId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   // Reload matches whenever the globally selected team changes.
   useEffect(() => {
-    if (!selectedTeamId) { setMatches([]); setLoadingMatches(false); return; }
+    if (!selectedTeamId) return;
     let cancelled = false;
-    setLoadingMatches(true);
     getMatches(selectedTeamId)
-      .then(rows => { if (!cancelled) setMatches(rows); })
-      .catch(() => { if (!cancelled) setMatches([]); })
-      .finally(() => { if (!cancelled) setLoadingMatches(false); });
+      .then(rows => { if (!cancelled) { setMatches(rows); setMatchesTeamId(selectedTeamId); } })
+      .catch(() => { if (!cancelled) { setMatches([]); setMatchesTeamId(selectedTeamId); } });
     return () => { cancelled = true; };
   }, [selectedTeamId]);
 
+  const loadingMatches = !!selectedTeamId && matchesTeamId !== selectedTeamId;
   const loading = teamsLoading || loadingMatches;
 
   const cards: AnalysisCard[] = useMemo(() => {
-    if (matches.length === 0) return MOCK_CARDS;
+    if (!selectedTeamId || matches.length === 0) return MOCK_CARDS;
     const sorted = [...matches].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
     return sorted.map(m => ({
       id: m.id,
@@ -79,7 +78,7 @@ export default function AnalysisPage() {
       result: "DRAW",
       status: m.status,
     }));
-  }, [matches, selectedTeam]);
+  }, [matches, selectedTeam, selectedTeamId]);
 
   const filtered = cards.filter(c =>
     `${c.title} ${c.opponent}`.toLowerCase().includes(query.toLowerCase())
