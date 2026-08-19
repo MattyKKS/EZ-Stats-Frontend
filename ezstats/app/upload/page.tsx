@@ -99,7 +99,7 @@ export default function UploadPage() {
   };
 
   const handleGenerate = () => {
-    router.push(`/analysis/mock-${Date.now()}`);
+    router.push(`/match-statistics/mock-${Date.now()}`);
   };
 
   return (

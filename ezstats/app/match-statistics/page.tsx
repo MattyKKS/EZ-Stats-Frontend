@@ -86,7 +86,7 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen bg-bg-secondary p-5">
-      <Header title="Analysis" description="All match analyses" />
+      <Header title="Match Statistics" description="All match analyses" />
 
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="relative w-full max-w-md">
@@ -117,7 +117,7 @@ export default function AnalysisPage() {
             return (
               <Link
                 key={c.id}
-                href={`/analysis/${c.id}`}
+                href={`/match-statistics/${c.id}`}
                 className="bg-white rounded-xl border border-border overflow-hidden no-underline hover:border-primary transition-colors"
               >
                 <div className="relative aspect-video bg-bg-secondary flex items-center justify-center">

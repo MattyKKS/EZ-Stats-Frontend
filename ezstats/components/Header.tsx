@@ -19,26 +19,29 @@ export default function Header({
   showTeamSwitcher = true,
 }: HeaderProps) {
   return (
-    <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
-      <div>
-        <h1 className="text-xl font-bold text-text-primary leading-tight m-0">
-          {title}
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">{description}</p>
+    <>
+      <div className="flex items-center justify-between pb-3 mb-5 border-b border-border">
+        <div>{showTeamSwitcher && <TeamSwitcher />}</div>
+
+        <div>
+          {action ?? (showNewAnalysis && (
+            <Link
+              href="/upload"
+              className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium px-3 py-2 rounded-lg no-underline whitespace-nowrap transition-colors"
+            >
+              <Plus size={13} />
+              New Analysis
+            </Link>
+          ))}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {showTeamSwitcher && <TeamSwitcher />}
-        {action ?? (showNewAnalysis && (
-          <Link
-            href="/upload"
-            className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary-hover text-white text-xs font-medium px-3 py-2 rounded-lg no-underline whitespace-nowrap transition-colors"
-          >
-            <Plus size={13} />
-            New Analysis
-          </Link>
-        ))}
+      <div className="mb-5">
+        <h1 className="text-lg font-bold text-text-primary leading-tight m-0">
+          {title}
+        </h1>
+        <p className="text-xs text-text-secondary mt-1">{description}</p>
       </div>
-    </div>
+    </>
   );
 }
