@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { User, Mail, Lock } from "lucide-react";
 import AuthField from "@/components/auth/AuthField";
 import PasswordRequirements from "@/components/auth/PasswordRequirements";
+import { register } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,13 +15,24 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const passwordsMismatch = confirmPassword.length > 0 && confirmPassword !== password;
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (passwordsMismatch) return;
-    router.push("/dashboard");
+    setError(null);
+    setSubmitting(true);
+    try {
+      await register(email, password, fullName);
+      router.push("/dashboard");
+    } catch (err) {
+      const conflict = err instanceof Error && err.message.includes("409");
+      setError(conflict ? "An account with that email already exists" : "Could not create account");
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -83,11 +95,16 @@ export default function RegisterPage() {
           )}
         </div>
 
+        {error && (
+          <p className="text-xs font-medium text-red-500">{error}</p>
+        )}
+
         <button
           type="submit"
-          className="mt-2 w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl py-3.5 transition-colors"
+          disabled={submitting}
+          className="mt-2 w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl py-3.5 transition-colors disabled:opacity-60"
         >
-          Register
+          {submitting ? "Creating…" : "Register"}
         </button>
       </form>
 

@@ -15,10 +15,32 @@ async function request<T>(
     method,
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
+    // Send the httpOnly auth cookie on every request.
+    credentials: "include",
   });
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }
+
+// ── Auth ────────────────────────────────────────────────────────────────────────
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+}
+
+export const login = (email: string, password: string) =>
+  request<{ user: AuthUser }>("POST", "/auth/login", { email, password });
+
+export const register = (email: string, password: string, name?: string) =>
+  request<{ user: AuthUser }>("POST", "/auth/register", { email, password, name });
+
+export const logout = () =>
+  request<{ ok: boolean }>("POST", "/auth/logout");
+
+export const getMe = () =>
+  request<AuthUser>("GET", "/auth/me");
 
 // ── Teams ─────────────────────────────────────────────────────────────────────
 
@@ -73,7 +95,7 @@ export const deleteMatch = (id: string) =>
 export async function uploadMatchVideo(matchId: string, file: File): Promise<Match> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${BASE_URL}/matches/${matchId}/video`, { method: "POST", body: form });
+  const res = await fetch(`${BASE_URL}/matches/${matchId}/video`, { method: "POST", body: form, credentials: "include" });
   if (!res.ok) throw new Error(`video upload → ${res.status}`);
   return res.json();
 }
@@ -83,13 +105,13 @@ export async function uploadMatchVideo(matchId: string, file: File): Promise<Mat
 export async function uploadTeamLogo(teamId: string, file: File): Promise<Team> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${BASE_URL}/teams/${teamId}/logo`, { method: "POST", body: form });
+  const res = await fetch(`${BASE_URL}/teams/${teamId}/logo`, { method: "POST", body: form, credentials: "include" });
   if (!res.ok) throw new Error(`logo upload → ${res.status}`);
   return res.json();
 }
 
 export async function deleteTeamLogo(teamId: string): Promise<void> {
-  await fetch(`${BASE_URL}/teams/${teamId}/logo`, { method: "DELETE" });
+  await fetch(`${BASE_URL}/teams/${teamId}/logo`, { method: "DELETE", credentials: "include" });
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

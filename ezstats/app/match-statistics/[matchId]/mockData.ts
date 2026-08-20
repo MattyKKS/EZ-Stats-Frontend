@@ -26,6 +26,7 @@ export const MOCK_MATCH: MatchWithTeam = {
     description: null,
     primaryColor: "#EF4444",
     secondaryColor: null,
+    logoUrl: null,
     ownerId: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

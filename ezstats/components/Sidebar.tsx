@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { logout } from "@/lib/api";
 import {
   LayoutDashboard,
   UserCircle,
@@ -119,11 +120,21 @@ function NavLinks({
 //  Profile menu — reveals Logout when the chevron is clicked
 function ProfileMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      router.push("/login");
+    }
+  };
 
   return (
     <div className="px-3 pb-4">
       {open && (
         <button
+          onClick={handleLogout}
           title={collapsed ? "Logout" : undefined}
           className={[
             "flex items-center w-full rounded-[10px] mb-1 text-sm font-medium text-[#4b5563] hover:bg-bg-secondary transition-colors",

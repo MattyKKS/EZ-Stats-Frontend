@@ -5,15 +5,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock } from "lucide-react";
 import AuthField from "@/components/auth/AuthField";
+import { login } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    router.push("/dashboard");
+    setError(null);
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      router.push("/dashboard");
+    } catch {
+      setError("Invalid email or password");
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -51,11 +62,16 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {error && (
+          <p className="text-xs font-medium text-red-500">{error}</p>
+        )}
+
         <button
           type="submit"
-          className="mt-2 w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl py-3.5 transition-colors"
+          disabled={submitting}
+          className="mt-2 w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-xl py-3.5 transition-colors disabled:opacity-60"
         >
-          Login
+          {submitting ? "Logging in…" : "Login"}
         </button>
       </form>
 
