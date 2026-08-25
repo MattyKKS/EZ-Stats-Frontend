@@ -7,11 +7,10 @@ import { logout } from "@/lib/api";
 import {
   LayoutDashboard,
   UserCircle,
-  Upload,
+  Plus,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Menu,
   X,
   type LucideIcon,
@@ -33,12 +32,34 @@ const navItems: {
       { href: "/player-statistics", label: "Player statistics" },
     ],
   },
-  { href: "/upload", label: "Upload Video", icon: Upload },
   { href: "/team-profile", label: "Team Profile", icon: UserCircle },
 ];
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NewAnalysisButton({
+  collapsed,
+  onClick,
+}: {
+  collapsed: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href="/upload"
+      onClick={onClick}
+      title={collapsed ? "New Analysis" : undefined}
+      className={[
+        "inline-flex items-center justify-center bg-primary hover:bg-primary-hover text-white text-sm font-medium rounded-[16px] no-underline transition-colors",
+        collapsed ? "w-10 h-10 mx-auto" : "gap-1.5 px-3 py-[10px]",
+      ].join(" ")}
+    >
+      <Plus size={16} />
+      {!collapsed && "New Analysis"}
+    </Link>
+  );
 }
 
 function NavLink({
@@ -64,15 +85,15 @@ function NavLink({
       onClick={onClick}
       title={collapsed ? label : undefined}
       className={[
-        "relative flex items-center rounded-[10px] text-sm font-medium no-underline transition-colors duration-150",
-        collapsed ? "justify-center py-[10px]" : indent ? "justify-start py-2 pl-11 pr-3" : "justify-start gap-3 px-3 py-[10px]",
+        "relative flex items-center gap-3 rounded-[8px] text-sm font-medium no-underline transition-colors duration-150",
+        collapsed ? "justify-center py-[10px]" : indent ? "justify-start py-2 pl-12 pr-3" : "justify-start pl-4 pr-3 py-[10px]",
         active ? "bg-primary-bg text-primary" : "text-[#4b5563] hover:bg-bg-secondary",
       ].join(" ")}
     >
       {Icon && <Icon size={20} />}
       {!collapsed && <span>{label}</span>}
       {active && (
-        <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-l-full" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
       )}
     </Link>
   );
@@ -89,6 +110,8 @@ function NavLinks({
 }) {
   return (
     <nav className="flex-1 flex flex-col gap-4 px-3 py-5">
+      <NewAnalysisButton collapsed={collapsed} onClick={onNavigate} />
+
       {navItems.map(({ href, label, icon, subItems }) => (
         <div key={href} className={subItems ? "flex flex-col gap-2" : undefined}>
           <NavLink
@@ -120,21 +143,11 @@ function NavLinks({
 //  Profile menu — reveals Logout when the chevron is clicked
 function ProfileMenu({ collapsed }: { collapsed: boolean }) {
   const [open, setOpen] = useState(false);
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } finally {
-      router.push("/login");
-    }
-  };
 
   return (
     <div className="px-3 pb-4">
       {open && (
         <button
-          onClick={handleLogout}
           title={collapsed ? "Logout" : undefined}
           className={[
             "flex items-center w-full rounded-[10px] mb-1 text-sm font-medium text-[#4b5563] hover:bg-bg-secondary transition-colors",
@@ -224,7 +237,7 @@ export default function Sidebar() {
               pathname={pathname}
               onNavigate={() => setMobileOpen(false)}
             />
-            <ProfileMenu collapsed={false} />
+            <LogoutButton collapsed={false} />
           </div>
         </div>
       )}
@@ -236,35 +249,9 @@ export default function Sidebar() {
           collapsed ? "w-[72px]" : "w-64",
         ].join(" ")}
       >
-        <div
-          className={[
-            "flex items-center h-14 border-b border-border px-3",
-            collapsed ? "justify-center" : "justify-between",
-          ].join(" ")}
-        >
-          {!collapsed && (
-            <Image
-              src="/logo.png"
-              alt="EzStats"
-              width={128}
-              height={40}
-              className="object-contain"
-            />
-          )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-bg-secondary flex-shrink-0"
-          >
-            {collapsed ? (
-              <ChevronRight size={16} className="text-[#4b5563]" />
-            ) : (
-              <ChevronLeft size={16} className="text-[#4b5563]" />
-            )}
-          </button>
-        </div>
-
         <NavLinks collapsed={collapsed} pathname={pathname} />
-        <ProfileMenu collapsed={collapsed} />
+        <CollapseToggle collapsed={collapsed} onClick={() => setCollapsed(v => !v)} />
+        <LogoutButton collapsed={collapsed} />
       </div>
     </>
   );

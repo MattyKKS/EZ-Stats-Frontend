@@ -107,7 +107,6 @@ export default function UploadPage() {
       <Header
         title="Upload Video"
         description="Upload a football match video for analysis"
-        showNewAnalysis={false}
       />
 
       <div className="w-full bg-white rounded-2xl border border-border p-8 flex flex-col gap-6">
