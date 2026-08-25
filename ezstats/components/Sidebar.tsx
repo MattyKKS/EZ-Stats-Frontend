@@ -140,46 +140,52 @@ function NavLinks({
   );
 }
 
-//  Profile menu — reveals Logout when the chevron is clicked
-function ProfileMenu({ collapsed }: { collapsed: boolean }) {
-  const [open, setOpen] = useState(false);
+//  Toggles the desktop sidebar between expanded and icon-only
+function CollapseToggle({
+  collapsed,
+  onClick,
+}: {
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="px-3 pb-2">
+      <button
+        onClick={onClick}
+        title={collapsed ? "Expand" : "Collapse"}
+        className={[
+          "flex items-center w-full rounded-[8px] text-sm font-medium text-[#4b5563] hover:bg-bg-secondary transition-colors",
+          collapsed ? "justify-center py-[10px]" : "gap-3 px-3 py-[10px]",
+        ].join(" ")}
+      >
+        {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+        {!collapsed && <span>Collapse</span>}
+      </button>
+    </div>
+  );
+}
+
+//  Logout — profile info now lives in the header's ProfileMenu
+function LogoutButton({ collapsed }: { collapsed: boolean }) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
 
   return (
     <div className="px-3 pb-4">
-      {open && (
-        <button
-          title={collapsed ? "Logout" : undefined}
-          className={[
-            "flex items-center w-full rounded-[10px] mb-1 text-sm font-medium text-[#4b5563] hover:bg-bg-secondary transition-colors",
-            collapsed ? "justify-center py-[10px]" : "gap-3 px-3 py-[10px]",
-          ].join(" ")}
-        >
-          <LogOut size={20} />
-          {!collapsed && <span>Logout</span>}
-        </button>
-      )}
       <button
-        onClick={() => setOpen(v => !v)}
-        title={collapsed ? "Coach Htet" : undefined}
+        onClick={handleLogout}
+        title={collapsed ? "Logout" : undefined}
         className={[
-          "flex items-center w-full rounded-[10px] hover:bg-bg-secondary transition-colors",
-          collapsed ? "justify-center py-2" : "justify-between px-2 py-2",
+          "flex items-center w-full rounded-[10px] text-sm font-medium text-[#4b5563] hover:bg-bg-secondary transition-colors",
+          collapsed ? "justify-center py-[10px]" : "gap-3 px-3 py-[10px]",
         ].join(" ")}
       >
-        <span className="flex items-center gap-2 min-w-0">
-          <span className="w-8 h-8 rounded-full bg-primary-bg text-primary flex items-center justify-center text-xs font-semibold flex-shrink-0">
-            H
-          </span>
-          {!collapsed && (
-            <span className="text-sm font-medium text-text-primary truncate">Coach Htet</span>
-          )}
-        </span>
-        {!collapsed && (
-          <ChevronDown
-            size={16}
-            className={`text-[#4b5563] transition-transform duration-150 flex-shrink-0 ${open ? "rotate-180" : ""}`}
-          />
-        )}
+        <LogOut size={20} />
+        {!collapsed && <span>Logout</span>}
       </button>
     </div>
   );
