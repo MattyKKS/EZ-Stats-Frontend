@@ -157,3 +157,32 @@ export const saveTrackMaps = (
   matchId: string,
   maps: { trackId: number; playerId: string }[],
 ) => request<TrackMap[]>("POST", `/matches/${matchId}/track-maps`, { maps });
+
+// Per-player stats for a match: each mapped roster player's stats, summed across
+// every track mapped to them (so combining IDs just means mapping both tracks to
+// the same player). `unmapped` are detected tracks with no roster player yet.
+export interface MatchPlayerStat {
+  playerId: string;
+  name: string;
+  jerseyNumber: number | null;
+  trackIds: number[];
+  touches: number;
+  passes: number;
+  shots: number;
+  distancePx: number;
+}
+
+export interface UnmappedTrackStat {
+  trackId: number;
+  label: string;
+  touches: number;
+  passes: number;
+  shots: number;
+  distancePx: number;
+}
+
+export const getMatchPlayerStats = (matchId: string) =>
+  request<{ players: MatchPlayerStat[]; unmapped: UnmappedTrackStat[] }>(
+    "GET",
+    `/matches/${matchId}/player-stats`,
+  );
