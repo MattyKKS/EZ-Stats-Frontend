@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Shirt, ArrowUpDown, ChevronDown } from "lucide-react";
+import { Shirt, ArrowUpDown, ChevronDown, FileVideo } from "lucide-react";
 import { RosterPlayer } from "./types";
 import type { MatchReport } from "@/lib/types";
 import { getCropUrl, getTrackMaps, saveTrackMaps } from "@/lib/api";
@@ -32,6 +32,7 @@ export default function PlayerReviewTable({ matchId, report, videoUrl, teamName,
   // trackId -> assigned roster playerId
   const [assignments, setAssignments] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   // Load any previously saved mappings for this match.
   useEffect(() => {
@@ -70,14 +71,28 @@ export default function PlayerReviewTable({ matchId, report, videoUrl, teamName,
   return (
     <div className="flex flex-col gap-6">
       <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-black">
-        {videoUrl && (
-          <video src={videoUrl} className="absolute inset-0 w-full h-full object-contain" muted playsInline />
+        {videoUrl && !videoError ? (
+          <video
+            key={videoUrl}
+            src={videoUrl}
+            controls
+            preload="metadata"
+            playsInline
+            onError={() => setVideoError(true)}
+            className="absolute inset-0 w-full h-full object-contain"
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+            <FileVideo size={40} className="text-white/70" />
+            <p className="text-sm text-white/90">Preview unavailable — your browser can&apos;t play this format</p>
+            <p className="text-xs text-white/50">The video was uploaded and analyzed normally</p>
+          </div>
         )}
         {MARKER_POSITIONS.map((pos, i) => (
           <span
             key={i}
             style={{ top: pos.top, left: pos.left, backgroundColor: teamColor }}
-            className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg ring-2 ring-white/70"
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg ring-2 ring-white/70"
           >
             {i + 1}
           </span>

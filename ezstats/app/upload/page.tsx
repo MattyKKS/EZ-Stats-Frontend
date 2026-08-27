@@ -8,7 +8,7 @@ import VideoDropzone from "./VideoDropzone";
 import MatchDetailsForm from "./MatchDetailsForm";
 import PlayerReviewTable from "./PlayerReviewTable";
 import { EMPTY_FORM, MOCK_ROSTER, RosterPlayer, UploadFormState } from "./types";
-import { getTeam, createMatch, uploadMatchVideo, getMatchReport } from "@/lib/api";
+import { getTeam, createMatch, uploadMatchVideo, getMatchReport, getUploadedVideoUrl } from "@/lib/api";
 import type { MatchReport } from "@/lib/types";
 import { useTeamContext } from "@/lib/TeamContext";
 
@@ -33,6 +33,8 @@ export default function UploadPage() {
   const [matchId, setMatchId] = useState<string | null>(null);
   // The AI-worker report for that match (detected players + crops for mapping).
   const [report, setReport] = useState<MatchReport | null>(null);
+  // The uploaded video served back from the backend (byte-range playback).
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
 
   // Keep the form's team field in sync with the globally selected team.
   useEffect(() => {
@@ -124,8 +126,11 @@ export default function UploadPage() {
         date,
         teamColor,
       });
-      await uploadMatchVideo(created.id, file);
+      const updated = await uploadMatchVideo(created.id, file);
       setMatchId(created.id);
+      // Play the video back from the backend (supports range requests, so it
+      // plays files a local blob preview can't) in the review/mapping step.
+      if (updated.videoPath) setUploadedVideoUrl(getUploadedVideoUrl(updated.videoPath));
       // Pull the detected players (demo run for now) so the review step can map
       // worker track_ids to the real roster, with player crops as photos.
       getMatchReport(created.id).then(r => setReport(r)).catch(() => setReport(null));
@@ -200,7 +205,7 @@ export default function UploadPage() {
           <PlayerReviewTable
             matchId={matchId}
             report={report}
-            videoUrl={videoUrl}
+            videoUrl={uploadedVideoUrl ?? videoUrl}
             teamName={selectedTeam?.name ?? "Team"}
             teamColor={selectedTeam?.primaryColor ?? "#05714B"}
             roster={roster}
