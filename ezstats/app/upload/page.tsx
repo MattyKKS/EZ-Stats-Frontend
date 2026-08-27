@@ -8,8 +8,11 @@ import VideoDropzone from "./VideoDropzone";
 import MatchDetailsForm from "./MatchDetailsForm";
 import PlayerReviewTable from "./PlayerReviewTable";
 import { EMPTY_FORM, MOCK_ROSTER, RosterPlayer, UploadFormState } from "./types";
-import { getTeam } from "@/lib/api";
+import { getTeam, createMatch, uploadMatchVideo, getMatchReport } from "@/lib/api";
+import type { MatchReport } from "@/lib/types";
 import { useTeamContext } from "@/lib/TeamContext";
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
 
 type Stage = "form" | "processing" | "review";
 
@@ -26,6 +29,10 @@ export default function UploadPage() {
   const [progress, setProgress] = useState(0);
   const [roster, setRoster] = useState<RosterPlayer[]>(MOCK_ROSTER);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  // The real match created on the backend when the video is uploaded.
+  const [matchId, setMatchId] = useState<string | null>(null);
+  // The AI-worker report for that match (detected players + crops for mapping).
+  const [report, setReport] = useState<MatchReport | null>(null);
 
   // Keep the form's team field in sync with the globally selected team.
   useEffect(() => {
@@ -56,12 +63,14 @@ export default function UploadPage() {
     return () => clearInterval(interval);
   }, [stage]);
 
+  // Advance to review only once the fake progress is done AND the real upload
+  // has finished (matchId is set), so "Generate" has a real match to open.
   useEffect(() => {
-    if (stage === "processing" && progress >= 100) {
+    if (stage === "processing" && progress >= 100 && matchId) {
       const t = setTimeout(() => setStage("review"), 300);
       return () => clearTimeout(t);
     }
-  }, [stage, progress]);
+  }, [stage, progress, matchId]);
 
   // Updating the team here also updates the global selection, so switching
   // teams from this form (or the header switcher) stays in sync everywhere.
@@ -80,11 +89,14 @@ export default function UploadPage() {
     form.matchTime !== "" &&
     form.opponent.trim() !== "";
 
-  const handleAnalyze = () => {
-    if (!isFormComplete) return;
+  const handleAnalyze = async () => {
+    if (!isFormComplete || !file) return;
 
-    // Best-effort real roster lookup — falls back to mock names since the
-    // AI worker / backend isn't wired up yet.
+    setMatchId(null);
+    setStage("processing");
+
+    // Best-effort real roster lookup — falls back to mock names when the team
+    // has no players yet.
     getTeam(form.teamId)
       .then(t => {
         if (t.players.length > 0) {
@@ -95,11 +107,36 @@ export default function UploadPage() {
       })
       .catch(() => setRoster(MOCK_ROSTER));
 
-    setStage("processing");
+    try {
+      // Create the match session, then save the video to the backend. Online AI
+      // processing isn't wired yet, so the match shows the demo analysis for now.
+      const date =
+        form.matchDate && form.matchTime
+          ? new Date(`${form.matchDate}T${form.matchTime}`).toISOString()
+          : undefined;
+      const teamColor =
+        selectedTeam?.primaryColor && HEX.test(selectedTeam.primaryColor)
+          ? selectedTeam.primaryColor
+          : undefined;
+
+      const created = await createMatch(form.teamId, {
+        opponent: form.opponent.trim(),
+        date,
+        teamColor,
+      });
+      await uploadMatchVideo(created.id, file);
+      setMatchId(created.id);
+      // Pull the detected players (demo run for now) so the review step can map
+      // worker track_ids to the real roster, with player crops as photos.
+      getMatchReport(created.id).then(r => setReport(r)).catch(() => setReport(null));
+    } catch {
+      setToast("Upload failed — please try again");
+      setStage("form");
+    }
   };
 
   const handleGenerate = () => {
-    router.push(`/match-statistics/mock-${Date.now()}`);
+    router.push(matchId ? `/match-statistics/${matchId}` : `/match-statistics/mock-${Date.now()}`);
   };
 
   return (
@@ -162,6 +199,8 @@ export default function UploadPage() {
 
         {stage === "review" && (
           <PlayerReviewTable
+            matchId={matchId}
+            report={report}
             videoUrl={videoUrl}
             teamName={selectedTeam?.name ?? "Team"}
             teamColor={selectedTeam?.primaryColor ?? "#05714B"}

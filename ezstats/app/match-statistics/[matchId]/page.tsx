@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getMatch, getMatchReport, getStatsVideoUrl, getSpatialVideoUrl } from "@/lib/api";
+import { getMatch, getMatchReport, getStatsVideoUrl, getSpatialVideoUrl, getUploadedVideoUrl } from "@/lib/api";
 import type { MatchReport } from "@/lib/types";
 import type { MatchWithTeam } from "./types";
 import { MOCK_MATCH, MOCK_REPORT, MOCK_ROUND_LABEL, MOCK_VIDEO_URL } from "./mockData";
@@ -62,7 +62,16 @@ export default function MatchAnalysisPage() {
     );
   }
 
-  const hasVideo = matchIsMock || (match.status === "COMPLETED" && !!match.videoPath);
+  // Prefer the worker's overlay video once a real run is linked; until then,
+  // show the raw video the user uploaded to the backend (if any).
+  const uploadedUrl = match.videoPath ? getUploadedVideoUrl(match.videoPath) : null;
+  const statsSrc = matchIsMock
+    ? MOCK_VIDEO_URL
+    : match.runId
+      ? getStatsVideoUrl(match.id)
+      : uploadedUrl ?? getStatsVideoUrl(match.id);
+  const spatialSrc = matchIsMock ? MOCK_VIDEO_URL : getSpatialVideoUrl(match.id);
+  const hasVideo = matchIsMock || !!match.runId || !!match.videoPath;
 
   return (
     <div className="min-h-screen bg-bg-secondary p-5 flex flex-col gap-4">
@@ -77,8 +86,8 @@ export default function MatchAnalysisPage() {
 
         <div className="flex flex-col gap-4">
           <VideoPanel
-            statsVideoUrl={matchIsMock ? MOCK_VIDEO_URL : getStatsVideoUrl(match.id)}
-            spatialVideoUrl={matchIsMock ? MOCK_VIDEO_URL : getSpatialVideoUrl(match.id)}
+            statsVideoUrl={statsSrc}
+            spatialVideoUrl={spatialSrc}
             hasVideo={hasVideo}
           />
           <MatchEvents events={report?.events} />

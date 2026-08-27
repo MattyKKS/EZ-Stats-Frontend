@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Shirt, ArrowUpDown, ChevronDown } from "lucide-react";
 import { RosterPlayer } from "./types";
+import type { MatchReport } from "@/lib/types";
+import { getCropUrl, getTrackMaps, saveTrackMaps } from "@/lib/api";
 
 interface Props {
+  matchId: string | null;
+  report: MatchReport | null;
   videoUrl: string | null;
   teamName: string;
   teamColor: string;
   roster: RosterPlayer[];
   onGenerate: () => void;
 }
-
-const DETECTED_COUNT = 12;
 
 // Fixed mock positions standing in for AI-detected player coordinates.
 const MARKER_POSITIONS = [
@@ -24,11 +26,46 @@ const MARKER_POSITIONS = [
 
 const COLUMNS = ["Player Name (Num)", "Team (H/A)", "Touches", "Passes", "Shots", "Distance (px)"];
 
-export default function PlayerReviewTable({ videoUrl, teamName, teamColor, roster, onGenerate }: Props) {
-  const [assignments, setAssignments] = useState<string[]>(Array(DETECTED_COUNT).fill(""));
+export default function PlayerReviewTable({ matchId, report, videoUrl, teamName, teamColor, roster, onGenerate }: Props) {
+  const detected = report?.players ?? [];
 
-  const setAssignment = (i: number, playerId: string) =>
-    setAssignments(a => a.map((v, idx) => (idx === i ? playerId : v)));
+  // trackId -> assigned roster playerId
+  const [assignments, setAssignments] = useState<Record<number, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  // Load any previously saved mappings for this match.
+  useEffect(() => {
+    if (!matchId) return;
+    let cancelled = false;
+    getTrackMaps(matchId)
+      .then(maps => {
+        if (cancelled) return;
+        const init: Record<number, string> = {};
+        for (const m of maps) init[m.trackId] = m.playerId;
+        setAssignments(init);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [matchId]);
+
+  const setAssignment = (trackId: number, playerId: string) =>
+    setAssignments(a => ({ ...a, [trackId]: playerId }));
+
+  const handleGenerate = async () => {
+    if (matchId) {
+      setSaving(true);
+      try {
+        const maps = Object.entries(assignments)
+          .filter(([, playerId]) => playerId)
+          .map(([trackId, playerId]) => ({ trackId: Number(trackId), playerId }));
+        await saveTrackMaps(matchId, maps);
+      } catch {
+        // Non-fatal — still let the user through to the dashboard.
+      }
+      setSaving(false);
+    }
+    onGenerate();
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,54 +106,64 @@ export default function PlayerReviewTable({ videoUrl, teamName, teamColor, roste
               </tr>
             </thead>
             <tbody>
-              {assignments.map((assigned, i) => (
-                <tr key={i} className="border-t border-border">
-                  <td className="px-4 py-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-primary-bg flex items-center justify-center">
-                      <Shirt size={18} className="text-primary" />
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="relative w-44">
-                      <select
-                        value={assigned}
-                        onChange={e => setAssignment(i, e.target.value)}
-                        className={`w-full border rounded-lg pl-3 pr-8 py-1.5 text-sm appearance-none bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-colors ${
-                          assigned ? "border-border text-text-primary" : "border-border/40 text-text-muted"
-                        }`}
-                      >
-                        <option value="">Player Name</option>
-                        {roster.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}{p.jerseyNumber != null ? ` (${p.jerseyNumber})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span className="inline-flex items-center gap-1.5 text-text-secondary whitespace-nowrap">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: teamColor }} />
-                      {teamName} (H)
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-text-secondary">0</td>
-                  <td className="px-4 py-2.5 text-text-secondary">0</td>
-                  <td className="px-4 py-2.5 text-text-secondary">0</td>
-                  <td className="px-4 py-2.5 text-text-secondary">0</td>
-                </tr>
-              ))}
+              {detected.map(player => {
+                const assigned = assignments[player.track_id] ?? "";
+                const cropSrc = matchId && player.crop_path ? getCropUrl(matchId, player.crop_path) : null;
+                return (
+                  <tr key={player.track_id} className="border-t border-border">
+                    <td className="px-4 py-2.5">
+                      <div className="w-9 h-9 rounded-lg bg-primary-bg flex items-center justify-center overflow-hidden">
+                        {cropSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={cropSrc} alt={player.label} className="w-full h-full object-cover" />
+                        ) : (
+                          <Shirt size={18} className="text-primary" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="relative w-44">
+                        <select
+                          value={assigned}
+                          onChange={e => setAssignment(player.track_id, e.target.value)}
+                          className={`w-full border rounded-lg pl-3 pr-8 py-1.5 text-sm appearance-none bg-white focus:outline-none focus:ring-1 focus:ring-primary transition-colors ${
+                            assigned ? "border-border text-text-primary" : "border-border/40 text-text-muted"
+                          }`}
+                        >
+                          <option value="">Player Name</option>
+                          {roster.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}{p.jerseyNumber != null ? ` (${p.jerseyNumber})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center gap-1.5 text-text-secondary whitespace-nowrap">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: teamColor }} />
+                        {teamName} ({player.team_id === 0 ? "H" : "A"})
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-text-secondary">{player.touches}</td>
+                    <td className="px-4 py-2.5 text-text-secondary">{player.passes}</td>
+                    <td className="px-4 py-2.5 text-text-secondary">{player.shots}</td>
+                    <td className="px-4 py-2.5 text-text-secondary">{Math.round(player.distance_px)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
       <button
-        onClick={onGenerate}
-        className="w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold py-3 rounded-xl transition-colors"
+        onClick={handleGenerate}
+        disabled={saving}
+        className="w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold py-3 rounded-xl transition-colors disabled:opacity-60"
       >
-        Generate Match Data
+        {saving ? "Saving…" : "Generate Match Data"}
       </button>
     </div>
   );

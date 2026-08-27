@@ -135,3 +135,25 @@ export const getSpatialVideoUrl = (id: string): string =>
 
 export const getCropUrl = (id: string, cropPath: string): string =>
   `${BASE_URL}/matches/${id}/crops/${cropPath}`;
+
+/** Absolute URL for a raw uploaded match video stored on the backend. */
+export const getUploadedVideoUrl = (videoPath: string): string =>
+  `${BASE_URL}${videoPath}`;
+
+// ── Player ID mapping (Feature #6) ───────────────────────────────────────────
+
+export interface TrackMap {
+  id: string;
+  matchId: string;
+  trackId: number;
+  playerId: string;
+  createdAt: string;
+}
+
+export const getTrackMaps = (matchId: string) =>
+  request<TrackMap[]>("GET", `/matches/${matchId}/track-maps`);
+
+export const saveTrackMaps = (
+  matchId: string,
+  maps: { trackId: number; playerId: string }[],
+) => request<TrackMap[]>("POST", `/matches/${matchId}/track-maps`, { maps });
