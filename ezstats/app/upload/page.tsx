@@ -1,16 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Sparkles, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Sparkles, Loader2, Clock } from "lucide-react";
 import Header from "@/components/Header";
 import VideoDropzone from "./VideoDropzone";
 import MatchDetailsForm from "./MatchDetailsForm";
 import PlayerReviewTable from "./PlayerReviewTable";
+import { useLeaveGuard } from "./useLeaveGuard";
 import { EMPTY_FORM, MOCK_ROSTER, RosterPlayer, UploadFormState } from "./types";
-import { getTeam, createMatch, uploadMatchVideo, getMatchReport, getUploadedVideoUrl } from "@/lib/api";
-import type { MatchReport } from "@/lib/types";
+import {
+  getTeam, getMatch, getMatches, createMatch, updateMatch,
+  uploadMatchVideo, getMatchReport, getUploadedVideoUrl,
+} from "@/lib/api";
+import type { Match, MatchReport } from "@/lib/types";
 import { useTeamContext } from "@/lib/TeamContext";
+
+// A match past this point has a video + report but hasn't been finalized —
+// i.e. the review step was left unfinished and can be resumed.
+const RESUMABLE_STATUSES = ["UPLOADED", "QUEUED", "PROCESSING"];
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -18,6 +26,8 @@ type Stage = "form" | "processing" | "review";
 
 export default function UploadPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resumeId = searchParams.get("resume");
   const { teams, selectedTeamId, selectedTeam, setSelectedTeamId } = useTeamContext();
 
   const [form, setForm] = useState<UploadFormState>({ ...EMPTY_FORM });
@@ -36,10 +46,70 @@ export default function UploadPage() {
   // The uploaded video served back from the backend (byte-range playback).
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
 
+  // ?resume=<matchId> jumps straight into the review step for a match whose
+  // analysis was left unfinished, instead of starting a new upload.
+  const [resuming, setResuming] = useState(!!resumeId);
+  const [unfinishedMatch, setUnfinishedMatch] = useState<Match | null>(null);
+
+  // Warn before leaving mid-review — the mapping isn't saved until "Generate".
+  const { pendingHref, confirmLeave, cancelLeave } = useLeaveGuard(stage === "review");
+
   // Keep the form's team field in sync with the globally selected team.
   useEffect(() => {
     setForm(f => (f.teamId === selectedTeamId ? f : { ...f, teamId: selectedTeamId }));
   }, [selectedTeamId]);
+
+  // Rebuild the review step for a previously-abandoned match instead of
+  // starting a fresh upload.
+  useEffect(() => {
+    if (!resumeId) return;
+    let cancelled = false;
+    setResuming(true);
+
+    getMatch(resumeId)
+      .then(async m => {
+        if (cancelled) return;
+        setSelectedTeamId(m.teamId);
+        setMatchId(m.id);
+        if (m.videoPath) setUploadedVideoUrl(getUploadedVideoUrl(m.videoPath));
+
+        getMatchReport(m.id).then(r => { if (!cancelled) setReport(r); }).catch(() => {});
+
+        try {
+          const team = await getTeam(m.teamId);
+          if (!cancelled) {
+            setRoster(team.players.length > 0
+              ? team.players.map(p => ({ id: p.id, name: p.name, jerseyNumber: p.jerseyNumber }))
+              : MOCK_ROSTER);
+          }
+        } catch {
+          if (!cancelled) setRoster(MOCK_ROSTER);
+        }
+
+        if (!cancelled) setStage("review");
+      })
+      .catch(() => { if (!cancelled) setToast("Could not resume that analysis"); })
+      .finally(() => { if (!cancelled) setResuming(false); });
+
+    return () => { cancelled = true; };
+  }, [resumeId, setSelectedTeamId]);
+
+  // On the plain "New Analysis" form, surface the most recent match whose
+  // review was left unfinished so it can be picked back up.
+  useEffect(() => {
+    if (stage !== "form" || resumeId || !selectedTeamId) return;
+    let cancelled = false;
+    getMatches(selectedTeamId)
+      .then(list => {
+        if (cancelled) return;
+        const unfinished = [...list]
+          .filter(m => RESUMABLE_STATUSES.includes(m.status))
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+        setUnfinishedMatch(unfinished ?? null);
+      })
+      .catch(() => { if (!cancelled) setUnfinishedMatch(null); });
+    return () => { cancelled = true; };
+  }, [stage, selectedTeamId, resumeId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -140,7 +210,11 @@ export default function UploadPage() {
     }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    // Marks the review as finished so it stops showing up as resumable.
+    if (matchId) {
+      try { await updateMatch(matchId, { status: "COMPLETED" }); } catch { /* non-fatal */ }
+    }
     router.push(matchId ? `/match-statistics/${matchId}` : `/match-statistics/mock-${Date.now()}`);
   };
 
@@ -152,8 +226,29 @@ export default function UploadPage() {
       />
 
       <div className="w-full bg-white rounded-2xl border border-border p-8 flex flex-col gap-6">
-        {stage === "form" && (
+        {resuming && (
+          <div className="flex flex-col items-center justify-center gap-3 py-24">
+            <Loader2 size={28} className="text-primary animate-spin" />
+            <p className="text-sm text-text-muted">Resuming your analysis…</p>
+          </div>
+        )}
+
+        {!resuming && stage === "form" && (
           <>
+            {unfinishedMatch && (
+              <button
+                onClick={() => router.push(`/upload?resume=${unfinishedMatch.id}`)}
+                className="flex items-center justify-between gap-3 text-left border border-amber-200 bg-amber-50 rounded-xl px-4 py-3 hover:bg-amber-100/70 transition-colors"
+              >
+                <span className="flex items-center gap-2.5 text-sm text-amber-800">
+                  <Clock size={16} className="flex-shrink-0" />
+                  Unfinished analysis vs{" "}
+                  <span className="font-semibold">{unfinishedMatch.opponent ?? "opponent"}</span> — resume where you left off
+                </span>
+                <span className="text-xs font-semibold text-amber-800 whitespace-nowrap">Resume →</span>
+              </button>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="md:col-span-2">
                 <VideoDropzone
@@ -187,7 +282,7 @@ export default function UploadPage() {
           </>
         )}
 
-        {stage === "processing" && (
+        {!resuming && stage === "processing" && (
           <div className="flex flex-col items-center justify-center gap-4 py-24">
             <Loader2 size={32} className="text-primary animate-spin" />
             <p className="text-sm font-medium text-text-primary">Analyzing video with AI…</p>
@@ -201,7 +296,7 @@ export default function UploadPage() {
           </div>
         )}
 
-        {stage === "review" && (
+        {!resuming && stage === "review" && (
           <PlayerReviewTable
             matchId={matchId}
             report={report}
@@ -217,6 +312,33 @@ export default function UploadPage() {
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg">
           {toast}
+        </div>
+      )}
+
+      {pendingHref && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 flex flex-col gap-6">
+            <div>
+              <h3 className="text-xl font-semibold text-text-primary">Leave this analysis?</h3>
+              <p className="text-sm text-text-secondary mt-3 leading-relaxed">
+                You haven&apos;t finished reviewing player stats yet. You can resume this analysis later from the Upload Video page.
+              </p>
+            </div>
+            <div className="flex justify-between gap-6">
+              <button
+                onClick={cancelLeave}
+                className="flex-1 px-4 py-3 text-sm font-medium text-text-secondary border border-border rounded-lg hover:bg-bg-secondary transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={confirmLeave}
+                className="flex-1 px-4 py-3 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Leave
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -14,7 +14,6 @@ export function buildStatRows(summary: MatchReport["summary"] | undefined): Stat
     { label: "Passes",        value: summary.total_passes },
     { label: "Long Balls",    value: summary.total_long_balls },
     { label: "Shots",         value: summary.total_shots },
-    { label: "Goals",         value: summary.total_goals },
     { label: "Clearances",    value: summary.total_clearances },
     { label: "Interceptions", value: summary.total_interceptions },
   ];
@@ -34,6 +33,34 @@ export function getPossessionSplit(possession: Record<string, number> | undefine
   const [home, away] = values;
   const total = home + away || 1;
   return { home: Math.round((home / total) * 100), away: Math.round((away / total) * 100) };
+}
+
+// Distinct, readable colors to fall back on for an opponent with no color set.
+const OPPONENT_PALETTE = [
+  "#DC2626", "#2563EB", "#F59E0B", "#7C3AED",
+  "#0D9488", "#DB2777", "#65A30D", "#EA580C",
+];
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+// Picks a color for the opponent dot/possession bar. Deterministic per match
+// (so it doesn't change on re-render) but distinct from the team's own color.
+export function resolveOpponentColor(
+  matchId: string,
+  teamColor: string,
+  opponentColor: string | null,
+): string {
+  if (opponentColor) return opponentColor;
+  const start = hashString(matchId) % OPPONENT_PALETTE.length;
+  for (let i = 0; i < OPPONENT_PALETTE.length; i++) {
+    const candidate = OPPONENT_PALETTE[(start + i) % OPPONENT_PALETTE.length];
+    if (candidate.toLowerCase() !== teamColor.toLowerCase()) return candidate;
+  }
+  return OPPONENT_PALETTE[0];
 }
 
 export const eventLabels: Record<string, string> = {

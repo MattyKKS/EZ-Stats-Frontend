@@ -7,3 +7,10 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
+
+/* Pure scale, no opacity fade, so it reads as the shape itself spreading
+   open from a closed point at the center rather than fading into view. */
+@keyframes radar-grow {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}

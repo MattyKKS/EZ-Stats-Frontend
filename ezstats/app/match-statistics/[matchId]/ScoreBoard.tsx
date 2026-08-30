@@ -5,18 +5,20 @@ interface Props {
   match: MatchWithTeam;
   summary?: MatchSummaryStats;
   roundLabel?: string;
+  teamColor: string;
+  opponentColor: string;
 }
 
-function TeamDot({ color }: { color: string | null }) {
+function TeamDot({ color }: { color: string }) {
   return (
     <span
       className="w-9 h-9 rounded-full flex-shrink-0 border border-black/5"
-      style={{ backgroundColor: color ?? "#9CA3AF" }}
+      style={{ backgroundColor: color }}
     />
   );
 }
 
-export default function ScoreBoard({ match, summary, roundLabel }: Props) {
+export default function ScoreBoard({ match, summary, roundLabel, teamColor, opponentColor }: Props) {
   const homeGoals = summary?.total_goals ?? 0;
   // Only the merged AI report currently returns a single goal total, so the
   // opponent score falls back to 0 until the backend reports it per side.
@@ -28,11 +30,11 @@ export default function ScoreBoard({ match, summary, roundLabel }: Props) {
       <div className="bg-white rounded-xl border border-border px-6 py-5">
         <div className="flex items-center justify-center gap-6">
           <span className="text-base font-semibold text-text-primary">{match.team.name}</span>
-          <TeamDot color={match.teamColor ?? match.team.primaryColor} />
+          <TeamDot color={teamColor} />
           <span className="text-2xl font-bold text-text-primary tabular-nums">
             {homeGoals} - {awayGoals}
           </span>
-          <TeamDot color={match.opponentColor} />
+          <TeamDot color={opponentColor} />
           <span className="text-base font-semibold text-text-primary">
             {match.opponent ?? "Opponent"}
           </span>
