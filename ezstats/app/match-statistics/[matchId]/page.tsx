@@ -13,6 +13,7 @@ import ScoreBoard from "./ScoreBoard";
 import MatchSummaryCard from "./MatchSummaryCard";
 import VideoPanel from "./VideoPanel";
 import MatchEvents from "./MatchEvents";
+import MatchPlayerStats from "./MatchPlayerStats";
 
 export default function MatchAnalysisPage() {
   const params = useParams<{ matchId: string }>();
@@ -97,7 +98,7 @@ export default function MatchAnalysisPage() {
         opponentColor={opponentColor}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         <MatchSummaryCard report={report} teamColor={teamColor} opponentColor={opponentColor} />
 
         <div className="flex flex-col gap-4">
@@ -109,6 +110,8 @@ export default function MatchAnalysisPage() {
           <MatchEvents events={report?.events} />
         </div>
       </div>
+
+      <MatchPlayerStats matchId={match.id} teamId={match.team?.id ?? match.teamId} />
     </div>
   );
 }

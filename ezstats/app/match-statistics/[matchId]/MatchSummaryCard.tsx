@@ -29,7 +29,7 @@ export default function MatchSummaryCard({ report, teamColor, opponentColor }: P
     .filter((r): r is NonNullable<typeof r> => !!r);
 
   return (
-    <div className="bg-white rounded-xl border border-border p-6 flex flex-col gap-5">
+    <div className="bg-white rounded-xl border border-border p-6 flex flex-col gap-5 lg:h-full">
       <h2 className="font-semibold text-text-primary text-base">Match Summary</h2>
 
       <div className="flex items-center gap-6 text-sm text-text-secondary">
@@ -81,18 +81,23 @@ export default function MatchSummaryCard({ report, teamColor, opponentColor }: P
         </button>
       </div>
 
-      {view === "text" ? (
-        <div className="flex flex-col divide-y divide-border">
-          {rows.map(row => (
-            <div key={row.label} className="flex items-center justify-between py-2.5">
-              <span className="text-sm text-text-secondary">{row.label}:</span>
-              <span className="text-sm font-semibold text-text-primary">{row.value}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <RadarChart data={radarData} color={teamColor} />
-      )}
+      {/* At least the chart's height (so the card doesn't resize when toggling
+          Text / Chart), but grows to fill the card when it's stretched to match
+          the column beside it. */}
+      <div className="flex flex-col lg:flex-1 lg:min-h-[360px]">
+        {view === "text" ? (
+          <div className="flex flex-col divide-y divide-border">
+            {rows.map(row => (
+              <div key={row.label} className="flex items-center justify-between py-2.5">
+                <span className="text-sm text-text-secondary">{row.label}:</span>
+                <span className="text-sm font-semibold text-text-primary">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <RadarChart data={radarData} color={teamColor} />
+        )}
+      </div>
     </div>
   );
 }

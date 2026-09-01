@@ -25,15 +25,16 @@ export default function MatchEvents({ events }: Props) {
   const list = events ?? [];
 
   return (
-    <div className="bg-white rounded-xl border border-border p-6 flex flex-col gap-4 h-full">
+    <div className="bg-white rounded-xl border border-border p-6 flex flex-col gap-4">
       <h2 className="font-semibold text-text-primary text-base">Recent Events</h2>
 
       {list.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center py-10">
+        <div className="flex items-center justify-center py-10">
           <p className="text-sm text-text-muted">No events recorded yet</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-1 overflow-y-auto max-h-80">
+        // Show ~5 events; the rest scroll within this box.
+        <div className="flex flex-col gap-1 overflow-y-auto max-h-[13rem]">
           {list.slice(-20).reverse().map((e, i) => (
             <div key={i} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${typeDot[e.type] ?? "bg-gray-400"}`} />
