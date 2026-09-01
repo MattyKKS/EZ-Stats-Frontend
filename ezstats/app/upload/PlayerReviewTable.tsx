@@ -16,14 +16,6 @@ interface Props {
   onGenerate: () => void;
 }
 
-// Fixed mock positions standing in for AI-detected player coordinates.
-const MARKER_POSITIONS = [
-  { top: "22%", left: "30%" }, { top: "18%", left: "62%" }, { top: "35%", left: "48%" },
-  { top: "40%", left: "20%" }, { top: "45%", left: "72%" }, { top: "55%", left: "38%" },
-  { top: "60%", left: "58%" }, { top: "30%", left: "82%" }, { top: "65%", left: "15%" },
-  { top: "25%", left: "10%" }, { top: "50%", left: "90%" }, { top: "70%", left: "48%" },
-];
-
 const COLUMNS = ["Player Name (Num)", "Team (H/A)", "Touches", "Passes", "Shots", "Distance (px)"];
 
 export default function PlayerReviewTable({ matchId, report, videoUrl, teamName, teamColor, roster, onGenerate }: Props) {
@@ -88,15 +80,6 @@ export default function PlayerReviewTable({ matchId, report, videoUrl, teamName,
             <p className="text-xs text-white/50">The video was uploaded and analyzed normally</p>
           </div>
         )}
-        {MARKER_POSITIONS.map((pos, i) => (
-          <span
-            key={i}
-            style={{ top: pos.top, left: pos.left, backgroundColor: teamColor }}
-            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg ring-2 ring-white/70"
-          >
-            {i + 1}
-          </span>
-        ))}
       </div>
 
       <div className="border text-xs font-medium rounded-lg px-4 py-2.5 border-red-200 bg-red-50/60 text-red-500">
